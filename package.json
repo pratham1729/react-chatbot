@@ -12,8 +12,11 @@
     "url": "https://github.com/jahmed93"
   },
   "dependencies": {
+    "@metamask/detect-provider": "^2.0.0",
+    "axios": "^1.6.2",
     "bad-words": "^3.0.4",
     "daisyui": "^2.51.6",
+    "ethers": "^6.9.0",
     "moment": "^2.29.4",
     "openai": "^3.2.1",
     "react": "^18.2.0",
