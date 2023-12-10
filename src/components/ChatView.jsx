@@ -8,8 +8,6 @@ import { Tooltip as ReactTooltip } from 'react-tooltip';
 import Modal from './Modal';
 import Setting from './Setting';
 import PromptPerfect from './PromptPerfect';
-
-
 import { changeChain } from '../metamaskApi/changeChain';
 import { sendTransaction } from '../metamaskApi/sendTransaction';
 import { sendERC20Token } from '../metamaskApi/sendERC20';
@@ -18,8 +16,9 @@ import { gas1inch } from '../metamaskApi/gas1inch';
 import { balance1inch } from '../metamaskApi/getBalances';
 import { price1inch } from '../metamaskApi/price1inch';
 import { callContractFunction } from '../metamaskApi/callContractFunction';
-import { gasApi } from '../metamaskApi/gasApi';
-
+import { gasAPI } from '../metamaskApi/gasApi';
+import { contractMap } from '../utils/maps';
+import { reversedChainMap } from '../utils/maps';
 /**
  * A chat view component that displays a list of messages and a form for sending new messages.
  */
@@ -45,6 +44,42 @@ const ChatView = () => {
    * @param {string} newValue - The text of the new message.
    * @param {boolean} [ai=false] - Whether the message was sent by an AI or the user.
    */
+
+  async function send() {
+    const chainId = window.ethereum.networkVersion;
+    const chain = '0x' + parseInt(chainId).toString(16);
+    console.log(chainId.toString(16));
+    console.log(chain);
+    const chainname = reversedChainMap.get(chain);
+    console.log(chainname);
+    const contractAddress = contractMap.get(chainname).EtherHolder;
+    console.log(contractAddress);
+    var Accounts = [];
+    const userAccounts = await window.ethereum.request({
+      method: 'eth_requestAccounts',
+    });
+    Accounts = userAccounts;
+    if (Accounts.length > 0) {
+      const gasLimit = await window.ethereum.request({
+        method: 'eth_gasPrice',
+        params: [],
+      });
+      console.log(parseInt(gasLimit.slice(2), 16));
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: Accounts[0],
+            to: contractAddress,
+            value: '0xffff',
+            gasPrice: gasLimit,
+          },
+        ],
+      });
+      return txHash;
+    }
+  }
+
   const updateMessage = (newValue, ai = false) => {
     const id = Date.now() + Math.floor(Math.random() * 1000000);
     const newMsg = {
@@ -59,31 +94,35 @@ const ChatView = () => {
   const transact = async (object) => {
     for (const element of object) {
       if (element.Tool === 'changeChain') {
-        res=await changeChain(element.Args[0].Value);
+        res = await changeChain(element.Args[0].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'sendTransaction') {
-        res=await sendTransaction(element.Args[1].Value, element.Args[0].Value);
+        res = await sendTransaction(element.Args[1].Value, element.Args[0].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'sendERC20Token') {
-        res=await sendERC20Token(element.Args[1].Value, element.Args[0].Value, element.Args[2].Value);
+        res = await sendERC20Token(
+          element.Args[1].Value,
+          element.Args[0].Value,
+          element.Args[2].Value,
+        );
         updateMessage(res, true);
       } else if (element.Tool === 'swapCurrency') {
-        res=await swap(element.Args[0].Value, element.Args[1].Value, element.Args[2].Value);
+        res = await swap(element.Args[0].Value, element.Args[1].Value, element.Args[2].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'getgasprice1inch') {
-        res=await gas1inch(element.Args[0].Value);
+        res = await gas1inch(element.Args[0].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'getBalance') {
-        res=await balance1inch();
+        res = await balance1inch();
         updateMessage(res, true);
       } else if (element.Tool === 'getprice') {
-        res=await price1inch(element.Args[0].Value, element.Args[1].Value);
+        res = await price1inch(element.Args[0].Value, element.Args[1].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'getgaspriceMetamask') {
-        res=await gasApi(element.Args[0].Value);
+        res = await gasAPI(element.Args[0].Value);
         updateMessage(res, true);
       } else if (element.Tool === 'callContractFunction') {
-        res=await callContractFunction(
+        res = await callContractFunction(
           element.Args[0].Value,
           element.Args[2].Value,
           element.Args[3].Value,
@@ -108,6 +147,11 @@ const ChatView = () => {
 
     setFormValue('');
     updateMessage(newMsg, false);
+    var hash = await send();
+    console.log(hash);
+    while (hash == null) {
+      hash = await sendTransaction();
+    }
     const response = await axios.post('http://localhost:5000', {
       prompt: cleanPrompt,
     });
