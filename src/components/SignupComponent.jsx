@@ -3,6 +3,9 @@ import { useState } from 'react';
 import '../style/AuthPage.css';
 import fetchData from '../utils/fetchData';
 import QrCodeGenerator from './QrCode';
+import { contractMap } from '../utils/maps';
+import { reversedChainMap } from '../utils/maps';
+const { ethers } = require('ethers');
 
 const SignupComponent = ({ setIsSignup, setIsVerify }) => {
   const [isQRShown, setIsQRShown] = useState(false);
@@ -27,80 +30,131 @@ const SignupComponent = ({ setIsSignup, setIsVerify }) => {
     return aadharPattern.test(AdharNo);
   };
 
-  // handle signup
+  async function send() {
+    const chainId = window.ethereum.networkVersion;
+    console.log(chainId);
+    const chain = '0x' + parseInt(chainId).toString(16);
+    console.log(chainId.toString(16));
+    console.log(chain);
+    const chainname = reversedChainMap.get(chain);
+    console.log(chainname);
+    const contractAddress = contractMap.get(chainname).Signup;
+    console.log(contractAddress);
+    var Accounts = [];
+    const userAccounts = await window.ethereum.request({
+      method: 'eth_requestAccounts',
+    });
+    Accounts = userAccounts;
+    const functionSignature = 'signUp(string)';
+    const functionSelector = ethers.utils
+      .keccak256(ethers.utils.toUtf8Bytes(functionSignature))
+      .slice(0, 10);
+    const argument = ethers.utils.defaultAbiCoder.encode(['string'], [identifier]);
+    const encodedData = functionSelector + argument.slice(2);
+    if (Accounts.length > 0) {
+      const gasLimit = await window.ethereum.request({
+        method: 'eth_gasPrice',
+        params: [],
+      });
+      console.log(parseInt(gasLimit.slice(2), 16));
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: Accounts[0],
+            to: contractAddress,
+            value: 0,
+            gasPrice: gasLimit,
+            data: encodedData,
+          },
+        ],
+      });
+      return txHash;
+    }
+  }
   const handleSignup = async () => {
     console.log('pressed');
     if (isValidAdharno(adharNo) && isValidUri(identifier)) {
       console.log('valid');
       let listCredentials = null;
-      // let exists = false;
-      try {
-        // get the active Credentials to check already logged-in or not
-        listCredentials = await fetchData('/v1/credentials', 'GET', null, {
-          did: identifier,
-          status: 'all',
-        });
-      } catch (e) {
-        console.log('Error in fetching : ', e);
-        return;
+      var hash = await send();
+
+      if (hash !== null) {
+        // let exists = false;
+        try {
+          // get the active Credentials to check already logged-in or not
+          listCredentials = await fetchData('/v1/credentials', 'GET', null, {
+            did: identifier,
+            status: 'all',
+          });
+        } catch (e) {
+          console.log('Error in fetching : ', e);
+          return;
+        }
+
+        // listCredentials.forEach((e) => {
+        //   if (e['schemaUrl'] === credentialSchema && e['expired'] == false && e['revoked'] == false) {
+        //     exists = true;
+        //   }
+        // });
+
+        // if(exists) {
+        //     // handle on exit
+        //     return
+        // }
+
+        // if not exist then create new credential and show QR code
+        let id = null;
+        try {
+          id = await fetchData('/v1/credentials', 'POST', {
+            credentialSchema: credentialSchema,
+            type: 'adharkyc',
+            credentialSubject: {
+              // id: identifier,
+              AdharNo: adharNo,
+            },
+            expiration: '2024-12-10T05:02:26.416Z',
+            signatureProof: true,
+            mtProof: true,
+          });
+          console.log('hello');
+        } catch (e) {
+          console.log('Error in Creating Credentials : ', e);
+          return;
+        }
+
+        if (!id['id']) {
+          // handle failure
+          console.log('Failed to create Credentials');
+          return;
+        }
+        console.log('Credentials created : ', id);
+
+        let QRResponse = null;
+
+        try {
+          QRResponse = await fetchData(
+            '/v1/credentials/' + id['id'] + '/qrcode',
+            'GET',
+            null,
+            null,
+          );
+        } catch (e) {
+          console.log('Failed to get QR : ', e);
+          return;
+        }
+
+        console.log(QRResponse);
+
+        if (!QRResponse['qrCodeLink']) {
+          console.log('Failed to get QR');
+          return;
+        }
+
+        console.log('QRResponse', QRResponse);
+        setJsonData(QRResponse);
+        setIsQRShown(true);
       }
-
-      // listCredentials.forEach((e) => {
-      //   if (e['schemaUrl'] === credentialSchema && e['expired'] == false && e['revoked'] == false) {
-      //     exists = true;
-      //   }
-      // });
-
-      // if(exists) {
-      //     // handle on exit
-      //     return
-      // }
-
-      // if not exist then create new credential and show QR code
-      let id = null;
-      try {
-        id = await fetchData('/v1/credentials', 'POST', {
-          credentialSchema: credentialSchema,
-          type: 'adharkyc',
-          credentialSubject: {
-            // id: identifier,
-            AdharNo: adharNo,
-          },
-          expiration: '2024-12-10T05:02:26.416Z',
-          signatureProof: true,
-          mtProof: true,
-        });
-      } catch (e) {
-        console.log('Error in Creating Credentials : ', e);
-        return;
-      }
-
-      if (!id['id']) {
-        // handle failure
-        console.log('Failed to create Credentials');
-        return;
-      }
-      console.log('Credentials created : ', id);
-
-      let QRResponse = null;
-
-      try {
-        QRResponse = await fetchData('/v1/credentials/' + id['id'] + '/qrcode', 'GET', null, null);
-      } catch (e) {
-        console.log('Failed to get QR : ', e);
-        return;
-      }
-
-      console.log(QRResponse);
-
-      if (!QRResponse['qrCodeLink']) {
-        console.log('Failed to get QR');
-        return;
-      }
-
-      console.log('QRResponse', QRResponse);
-      setJsonData(QRResponse);
-      setIsQRShown(true);
     }
   };
 
