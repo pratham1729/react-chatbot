@@ -36,8 +36,8 @@ const VerifyLogin = ({ setUserID, setIsAuth, userID }) => {
       .then((data) => {
         console.log(data);
         if (data['verified']) {
-          localStorage.setItem('<userid>', true);
-          localStorage.setItem('user', '<userid>');
+          localStorage.setItem(`${userID}`, true);
+          localStorage.setItem('user', `${userID}`);
           console.log('Authenticated');
           window.location.href = '/chat';
         }
