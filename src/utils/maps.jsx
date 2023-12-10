@@ -49,6 +49,21 @@ export const chainMap = new Map([
   ['arbitrum', '0xA4B1'],
 ]);
 
+export const reversedChainMap = new Map([
+  ['0xe708', 'linea'],
+  ['0x44d', 'zkevm'],
+  ['0x38', 'bsc'],
+  ['0x64', 'gnosis'],
+  ['0x89', 'polygon'],
+  ['0x2105', 'base'],
+  ['0x1', 'ethereum_mainnet'],
+  ['0xaa36a7', 'sepolia'],
+  ['0x5', 'goerli'],
+  ['0x13881', 'mumbai_testnet'],
+  ['0x82750', 'scroll'],
+  ['0xA4B1', 'arbitrum'],
+]);
+
 export const chainsfor1inch = new Map([
   [
     '0x38',
@@ -150,4 +165,22 @@ export const chainsfor1inch = new Map([
       rpc: 'https://gnosis.drpc.org',
     },
   ],
+]);
+
+export const contractMap = new Map([
+  [
+    'polygon',
+    {
+      Signup: '0x06ee4d49b4fa553c9e83768bbcc4ff41b663e560',
+      EtherHolder: '0x7c9aa5895ab64b0c819959a6261fe4f02d52deb8',
+    },
+  ],
+  [
+    'sepolia',
+    {
+      Signup: '0x5f107b6c48ffd644823264329ddfb6734813e947',
+      EtherHolder: '0x702fd8aab4998643d3f910c6c4baa30a11131b22',
+    },
+  ],
+  ['Scroll', { Signup: '0x', EtherHolder: '0x' }],
 ]);

@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { web3 } from 'web3';
+import { utils } from 'web3';
 import { erc20AddressMap } from '../utils/maps';
 
 var Accounts = [];
@@ -15,10 +15,10 @@ const getDataField = async (address, amount) => {
   //     outputs: [{ name: '', type: 'bool' }],
   //   },
   // ];
-  var functionName="transfer(address,uint256)";
-  var hash = web3.utils.keccak256(functionName).slice(0, 10);
-  var types=["address","uint256"];
-  var functionArgs=[address,amount*10**18];
+  var functionName = 'transfer(address,uint256)';
+  var hash = utils.keccak256(functionName).slice(0, 10);
+  var types = ['address', 'uint256'];
+  var functionArgs = [address, amount * 10 ** 18];
   const data = ethers.utils.defaultAbiCoder.encode(types, functionArgs).slice(2);
   const dataFieldValue = hash + data;
   return dataFieldValue;
@@ -62,7 +62,7 @@ export const sendERC20Token = async (address, amount, tokenName) => {
         },
       ],
     });
-    return "Hash For ERC20 Token Transfer: " + txHash;
+    return 'Hash For ERC20 Token Transfer: ' + txHash;
   }
 };
 
